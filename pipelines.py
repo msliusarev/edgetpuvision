@@ -47,14 +47,21 @@ def inference_pipeline(layout, stillimage=False):
         ]
 
     return [
-        Filter('glfilterbin', filter='glcolorscale'),
-        Caps('video/x-raw', format='RGBA', width=size.width, height=size.height),
         Filter('videoconvert'),
         Caps('video/x-raw', format='RGB', width=size.width, height=size.height),
         Filter('videobox', autocrop=True),
         Caps('video/x-raw', width=layout.inference_size.width, height=layout.inference_size.height),
         Sink('app', name='appsink', emit_signals=True, max_buffers=1, drop=True, sync=False),
     ]
+    # return [
+    #    Filter('glfilterbin', filter='glcolorscale'),
+    #    Caps('video/x-raw', format='RGBA', width=size.width, height=size.height),
+    #    Filter('videoconvert'),
+    #    Caps('video/x-raw', format='RGB', width=size.width, height=size.height),
+    #    Filter('videobox', autocrop=True),
+    #    Caps('video/x-raw', width=layout.inference_size.width, height=layout.inference_size.height),
+    #    Sink('app', name='appsink', emit_signals=True, max_buffers=1, drop=True, sync=False),
+    #]
 
 # Display
 def image_display_pipeline(filename, layout):
@@ -148,7 +155,7 @@ def camera_headless_pipeline(fmt, layout):
     )
 
 # Streaming
-def video_streaming_pipeline(filename, layout):
+def video_streaming_pipeline_del(filename, layout):
     return (
         [Source('file', location=filename),
          Filter('qtdemux'),
@@ -158,6 +165,18 @@ def video_streaming_pipeline(filename, layout):
          Filter('h264parse'),
          Caps('video/x-h264', stream_format='byte-stream', alignment='nal'),
          h264_sink()],
+        [Pad('t'),
+         Queue(max_size_buffers=1),
+         Filter('decodebin'),
+         inference_pipeline(layout)],
+    )
+
+# Streaming
+def video_streaming_pipeline(filename, layout):
+    return (
+        [Source('file', location=filename),
+         Filter('qtdemux'),
+         Tee(name='t')],
         [Pad('t'),
          Queue(max_size_buffers=1),
          Filter('decodebin'),
